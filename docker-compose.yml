@@ -1,48 +1,65 @@
-version: "3"
+version: '3'
+# define all services
 services:
-  server:
-    restart: unless-stopped
-    image: merchant-onboarding
-    build:
+  # our service is called PHP Laravel ;-)
+  php-laravel:
+    # we want to use the image which is build from our Dockerfile
+    build: 
       context: .
       dockerfile: Dockerfile
+    image: merchant-onboarding
+    # apache is running on port 80 but we want to expose this to port 4000 on our local machine
+    container_name: webapp-merchant
+    #logging:
+    #    driver: "json-file"
+    #    options:
+    #        max-file: 5
+    #        max-size: 10m
+    restart: always
     ports:
-      - "8000:80"
-    depends_on:
+      - "86:80"
+    privileged: true
+    
+    links:
       - mysql
-    environment:
-      - DB_HOST=mysql_host
-      - DB_PORT=3306
-      - DB_DATABASE=homestead
-      - DB_USERNAME=homestead
-      - DB_PASSWORD=secret
+      - redis
+    # we mount the working dir into the container, handy for development
     volumes:
-      - ./src:/var/www/html
-    env_file:
-      - .env
-    networks:
-      - web-dev
+      - ./src/merchant-onboarding-portal:/var/www/html
+      - ./laravel-que.conf:/etc/supervisor/conf.d/laravel-que.conf
+      #- ./short-schedule.conf:/etc/supervisor/conf.d/short-schedule.conf
+      - ./000-default.conf:/etc/apache2/sites-enabled/000-default.conf
+    #network_mode: host
+    #command: bash -c "rm /run/apache2/apache2.pid"
 
+      
   mysql:
-    hostname: mysql_host
-    restart: unless-stopped
-    #platform: linux/x86_64
-    image: "mysql:5.7"
-    ports:
-      - "3307:3306"
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    image: mysql:5.7
+    container_name: mysql-merchant
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: homestead
-      MYSQL_USER: homestead
-      MYSQL_PASSWORD: secret
+      - "MYSQL_ROOT_PASSWORD=hadi123"
+      - "MYSQL_DATABASE=merchant-onboarding-portal"
+      - "MYSQL_PASSWORD=hadi123"
+    ports:
+      - "3310:3306"
     volumes:
-      - ./database:/var/lib/mysql
-    networks:
-      - web-dev
+    - ./dbdata:/var/lib/mysql
 
-networks:
-  web-dev:
+    #network_mode: host
+   
 
+  redis:
+    image: redis:alpine
+    container_name: redis-merchant  
+      #environment:
+      #  REDIS_PASSWORD=redis
+    command: redis-server --appendonly yes --requirepass "redis"
+    volumes:
+      - ./redis:/data
+    #ports:
+    #  - "6379:6379"   
+  
 volumes:
-  database:
+  dbdata:
+
