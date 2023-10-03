@@ -22,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
         require_once app_path().'/Helpers/date_time.php';
         Paginator::useBootstrap();
 
+        if($this->app->environment('production')) {
+            \URL::forceScheme('https');
+        }
+
         // Ref: https://dzone.com/articles/how-to-use-laravel-macro-with-example
         SessionGuard::macro('activeBook', function () {
             $activeBook = Book::find($this->activeBookId());
